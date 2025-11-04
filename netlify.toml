@@ -1,0 +1,21 @@
+# netlify.toml
+
+[build]
+  functions = "netlify/functions" 
+  publish = "." 
+
+# 1. /api 代理规则 (优先匹配，但实际上放在这里或下面效果一样，因为都会进入函数)
+[[redirects]]
+  from = "/api/*"           
+  to = "/.netlify/functions/proxy"
+  status = 200                  
+  force = true
+
+# 2. Catch-all 规则：捕获所有其他请求 (包括 / 和所有动态路径)
+# Netlify 的重定向规则引擎会优先于函数内部的逻辑被执行。
+# 将 /* 放在后面，确保 /api/* 规则能被捕获，但在这里都导向同一个函数。
+[[redirects]]
+  from = "/*"           
+  to = "/.netlify/functions/proxy"
+  status = 200                  
+  force = true
