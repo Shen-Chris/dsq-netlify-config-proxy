@@ -87,11 +87,22 @@ exports.handler = async (event, context) => {
 		delete proxyHeaders['x-forwarded-host'];
 		delete proxyHeaders['x-forwarded-proto'];
 
-		const response = await fetch(fullTargetUrl, {
+		// 4.1. 构造用于 fetch 请求的配置对象
+		const fetchOptions = {
 			method: httpMethod,
 			headers: proxyHeaders,
-			body: body,
-		});
+		};
+
+		// 4.2. 只有当方法不是 GET 或 HEAD 时，才添加 body 参数
+		if (httpMethod !== 'GET' && httpMethod !== 'HEAD') {
+			// 确保 body 存在且非空，虽然 Netlify event.body 可能是 null 或 string
+			if (body) {
+				fetchOptions.body = body;
+			}
+		}
+
+		// 4.3. 发送代理请求
+		const response = await fetch(fullTargetUrl, fetchOptions);
 
 		// --- 返回响应 ---
 		const responseBody = await response.text();
