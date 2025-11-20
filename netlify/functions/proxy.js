@@ -126,17 +126,27 @@ exports.handler = async (event, context) => {
 		});
 
 		// 9. 返回响应
-		const responseBody = await proxyResponse.text();
+		// 9.1. 获取原始二进制 Buffer
+		// node-fetch 的 .buffer() 方法能获取原始数据
+		const responseBuffer = await proxyResponse.buffer();
+
+		// 9.2. 处理响应头
 		const responseHeaders = Object.fromEntries(proxyResponse.headers.entries());
 
-		// 移除 Netlify 不允许返回的特定头部
+		// 移除可能导致问题的头部
+		// content-encoding: 后端可能返回 gzip，但我们在 function 中解压了 (buffer())，
+		// 如果不移除这个头，浏览器会以为收到的是 gzip 数据而再次解压，导致乱码。
 		delete responseHeaders['content-encoding'];
+		delete responseHeaders['content-length']; // 让 Netlify 自动重新计算长度
 
+		// 9.3. 返回通用响应 (Base64 模式)
 		return {
 			statusCode: proxyResponse.status,
 			headers: responseHeaders,
-			body: responseBody,
-			isBase64Encoded: false,
+			// 将二进制 Buffer 转为 Base64 字符串
+			body: responseBuffer.toString('base64'),
+			// 告诉 Netlify："这是 Base64 编码的数据，请解码后再发给浏览器"
+			isBase64Encoded: true,
 		};
 	} catch (error) {
 		console.error('Netlify Proxy Error:', error);
